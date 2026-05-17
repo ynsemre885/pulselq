@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}HBYS 2.0 | Randevu Ekle{% endblock %}
+{% block page_title %}Randevu Ekle{% endblock %}
+{% block page_subtitle %}AI destekli randevu kaydı{% endblock %}
+
+{% block content %}
+<div class="card card-soft">
+  <div class="card-body">
+
+    {% if hata %}
+      <div class="alert alert-danger">{{ hata }}</div>
+    {% endif %}
+
+    {% if ai_brans %}
+      <div class="alert alert-success">
+        AI Önerilen Branş: <b>{{ ai_brans }}</b><br>
+        Güven Skoru: <b>%{{ ai_guven }}</b>
+      </div>
+    {% endif %}
+
+    {% if ai_top2 and ai_top2|length > 1 %}
+  <div class="alert alert-secondary">
+    <b>Alternatif Olasılıklar:</b><br>
+    {% for br, pct in ai_top2 %}
+      {% if br != ai_brans %}
+        • {{ br }} — %{{ pct }}<br>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
+
+     {% if ai_uyari %}
+  <div class="alert alert-warning">
+     {{ ai_uyari }}
+  </div>
+{% endif %}
+
+    {% if ai_brans_uyusmazlik %}
+  <div class="alert alert-warning">
+    {{ ai_brans_uyusmazlik }}
+  </div>
+{% endif %}
+
+     {% if aciliyet %}
+  {% if aciliyet == "ACIL" %}
+    <div class="alert alert-danger">
+      <b>🔴 ACİL DURUM!</b><br>
+      {{ acil_mesaj }}
+    </div>
+  {% elif aciliyet == "ONCELIKLI" %}
+    <div class="alert alert-warning">
+      <b>🟡 Öncelikli Durum</b><br>
+      {{ acil_mesaj }}
+    </div>
+  {% else %}
+    <div class="alert alert-success">
+      <b>🟢 Normal Öncelik</b><br>
+      {{ acil_mesaj }}
+    </div>
+  {% endif %}
+{% endif %}
+    
+      {% if onerilen_doktor %}
+<div class="alert alert-info">
+  <b>Önerilen Doktor:</b>
+  {{ onerilen_doktor['ad'] }} {{ onerilen_doktor['soyad'] }} — {{ onerilen_doktor['brans'] }}
+
+  {% if onerilen_saat %}
+    <br>
+    <b>Önerilen En Yakın Saat:</b> {{ onerilen_saat }}
+  {% endif %}
+</div>
+{% endif %}
+
+
+   {% if kkds %}
+<div class="alert alert-secondary">
+  <b>Klinik Karar Destek Analizi</b><br>
+
+  <b>Risk:</b> {{ kkds.risk }} <br>
+  <b>Öneriler:</b> {{ kkds.oneriler }} <br>
+  <b>Önerilen Tetkikler:</b> {{ kkds.tetkikler }} <br>
+
+  {% if kkds.kirmizi_bayrak != "Yok" %}
+  <span class="text-danger">
+    🚨 <b>Kırmızı Bayrak:</b> {{ kkds.kirmizi_bayrak }}
+  </span>
+  {% endif %}
+</div>
+{% endif %}  
+
+{% if triage_sonuc %}
+<div class="alert alert-dark">
+  <b>Gerçek Triage AI Motoru</b><br>
+
+  <b>Triage Skoru:</b> {{ triage_sonuc.skor }} <br>
+  <b>Triage Seviyesi:</b> {{ triage_sonuc.seviye }} <br>
+  <b>Yönlendirme:</b> {{ triage_sonuc.yonlendirme }} <br>
+
+  {% if triage_sonuc.kararlar %}
+    <b>Kararlar:</b>
+    {% for k in triage_sonuc.kararlar %}
+      <span class="badge bg-danger me-1">{{ k }}</span>
+    {% endfor %}
+    <br>
+  {% endif %}
+
+  {% if triage_sonuc.aciklamalar %}
+    <b>Açıklamalar:</b><br>
+    {% for a in triage_sonuc.aciklamalar %}
+      • {{ a }}<br>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endif %} 
+
+    <form method="post" class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Hasta ID</label>
+        <input class="form-control" type="text" name="hasta_id" required>
+      </div>
+
+      <div class="col-md-8">
+        <label class="form-label">Hasta Şikayeti</label>
+        <textarea class="form-control" name="sikayet" rows="2" required></textarea>
+      </div> 
+
+      <div class="col-12">
+        <hr>
+        <h5>Klinik Bilgiler (Klinik Karar Destek Sistemi)</h5>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Ateş (°C)</label>
+        <input class="form-control" type="number" step="0.1" name="ates">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Nabız</label>
+        <input class="form-control" type="number" name="nabiz">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Sistolik Tansiyon</label>
+        <input class="form-control" type="number" name="sistolik">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Diyastolik Tansiyon</label>
+        <input class="form-control" type="number" name="diyastolik">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">SpO2 (%)</label>
+        <input class="form-control" type="number" name="spo2">
+      </div>
+
+       <div class="col-md-4">
+         <label class="form-label">Kronik Hastalık</label>
+         <input class="form-control" type="text" name="kronik_hastalik" placeholder="Örn: diyabet, hipertansiyon">
+       </div>
+
+       <div class="col-md-5">
+         <label class="form-label">Alerji</label>
+         <input class="form-control" type="text" name="alerji" placeholder="Örn: penisilin">
+       </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Doktor</label>
+        <select class="form-select" name="doktor_id">
+          <option value="">Seçiniz...</option>
+          {% for d in doktorlar %}
+            <option value="{{ d['id'] }}" 
+             {% if (onerilen_doktor_id and d['id'] == onerilen_doktor_id) or
+                   (varsayilan_doktor_id and d['id']|string == varsayilan_doktor_id|string) %}
+               selected
+             {% endif %}>
+             {{ d['ad'] }} {{ d['soyad'] }} — {{ d['brans'] }}
+            </option> 
+          {% endfor %}
+        </select>
+        <div class="text-muted small mt-1">AI Öner için doktor seçmek zorunlu değil.</div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Tarih</label>
+        <input class="form-control" type="date" name="tarih" value="{{ varsayilan_tarih or '' }}" required> 
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Saat</label>
+        <input class="form-control" type="time" name="saat" value="{{ onerilen_saat or varsayilan_saat or '' }}"> 
+      </div>
+
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-outline-primary" type="submit" name="action" value="ai">AI Öner</button>
+        <button class="btn btn-success" type="submit" name="action" value="ai_save">AI ile Kaydet</button>
+        <button class="btn btn-primary" type="submit" name="action" value="save">Kaydet</button>
+        <a class="btn btn-outline-secondary" href="/panel">İptal</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %} 

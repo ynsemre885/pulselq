@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}HBYS | Hasta Detay{% endblock %}
+{% block page_title %}{{ hasta["ad"] }} {{ hasta["soyad"] }}{% endblock %}
+{% block page_subtitle %}Hasta geçmişi ve randevular{% endblock %}
+
+{% block top_actions %}
+<a class="btn btn-outline-secondary" href="/panel">← Panele Dön</a>
+<a class="btn btn-primary" href="/randevu_ekle">+ Randevu</a>
+{% endblock %}
+
+{% block content %}
+<div class="card card-soft mb-3">
+  <div class="card-body">
+    <div class="text-muted small">TC</div>
+    <div class="fw-bold">{{ hasta["tc"] }}</div>
+  </div>
+</div>
+
+<div class="alert alert-info">
+  <b>Hasta Geçmiş Özeti</b><br>
+  Son 30 gündeki başvuru sayısı: <b>{{ son_30 }}</b>
+</div>
+
+<div class="card card-soft mb-3">
+  <div class="card-body">
+    <h5 class="mb-3">AI Hasta Risk Analizi</h5>
+
+    {% if hasta_risk_ozeti %}
+    <div class="row g-3">
+
+      <div class="col-md-3">
+        <div class="text-muted small">Risk Puanı</div>
+        <div class="fw-bold fs-4">{{ hasta_risk_ozeti["puan"] }}</div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="text-muted small">Risk Seviyesi</div>
+        <div>
+          {% if hasta_risk_ozeti["seviye"] == "KRITIK" %}
+            <span class="badge bg-danger">🚨 Kritik</span>
+          {% elif hasta_risk_ozeti["seviye"] == "YUKSEK" %}
+            <span class="badge bg-warning text-dark">⚠ Yüksek</span>
+          {% elif hasta_risk_ozeti["seviye"] == "ORTA" %}
+            <span class="badge bg-info text-dark">🟡 Orta</span>
+          {% else %}
+            <span class="badge bg-success">🟢 Düşük</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="text-muted small">Acil Başvuru</div>
+        <div class="fw-bold">{{ hasta_risk_ozeti["acil_sayisi"] }}</div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="text-muted small">Toplam Başvuru</div>
+        <div class="fw-bold">{{ hasta_risk_ozeti["toplam_basvuru"] }}</div>
+      </div>
+
+    </div>
+
+    <div class="alert mt-3
+      {% if hasta_risk_ozeti['seviye'] == 'KRITIK' %}alert-danger
+      {% elif hasta_risk_ozeti['seviye'] == 'YUKSEK' %}alert-warning
+      {% elif hasta_risk_ozeti['seviye'] == 'ORTA' %}alert-info
+      {% else %}alert-success
+      {% endif %}">
+
+      <b>{{ hasta_risk_ozeti["mesaj"] }}</b>
+
+    </div>
+
+    {% if hasta_risk_ozeti["nedenler"] %}
+    <div class="mt-2">
+      <b>Risk Nedenleri</b>
+      <ul class="mb-0">
+        {% for n in hasta_risk_ozeti["nedenler"] %}
+        <li>{{ n }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-muted">Risk analizi oluşturulamadı.</div>
+    {% endif %}
+
+  </div>
+</div>  
+
+{% if hasta_uyarilari %}
+<div class="alert alert-warning">
+  <b>Hasta Uyarıları</b><br>
+  {% for u in hasta_uyarilari %}
+    • {{ u }}<br>
+  {% endfor %}
+</div>
+{% endif %} 
+
+{% if son_basvurular %}
+<div class="card mt-3">
+  <div class="card-body">
+    <h5 class="card-title">Son Başvurular</h5>
+    <ul class="mb-0">
+      {% for r in son_basvurular %}
+      <li>
+        <b>{{ r['tarih'] }}</b> — {{ r['sikayet'] or '-' }}
+        {% if r['aciliyet'] %}
+          — <span>{{ r['aciliyet'] }}</span>
+        {% endif %}
+        {% if r['risk_skor'] is not none %}
+          — Risk Skoru: {{ r['risk_skor'] }}
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}  
+
+<div class="card card-soft">
+  <div class="card-body">
+    <h5 class="mb-3">Randevu Geçmişi</h5>
+
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Saat</th>
+            <th>Doktor</th>
+            <th>Öncelik</th>
+            <th>Şikayet</th>
+            <th>Detay</th>  
+          </tr>
+        </thead>
+<tbody>
+  {% for r in randevular %}
+  <tr>
+    <td class="text-muted">{{ r["tarih"] }}</td>
+    <td class="text-muted">{{ r["saat"] }}</td>
+    <td class="text-muted">
+      {% if r["dad"] %}
+        {{ r["dad"] }} {{ r["dsoyad"] }} — {{ r["dbrans"] }}
+      {% else %}
+        -
+      {% endif %}
+    </td>
+    <td>
+      {% set a = (r["aciliyet"] or "NORMAL") %}
+      <span class="badge rounded-pill
+        {% if a == 'ACIL' %} bg-danger
+        {% elif a == 'ONCELIKLI' %} bg-warning text-dark
+        {% else %} bg-success
+        {% endif %}">
+        {{ a }}
+      </span>
+    </td>
+    <td class="text-muted">{{ r["sikayet"] }}</td>
+    <td>
+      <button class="btn btn-sm btn-outline-primary" type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#detay{{ r['rid'] }}"
+              aria-expanded="false"
+              aria-controls="detay{{ r['rid'] }}">
+        Detay
+      </button>
+    </td>
+  </tr>
+
+  <tr>
+    <td colspan="6" class="p-0 border-0">
+      <div class="collapse" id="detay{{ r['rid'] }}">
+        <div class="card card-soft border-0 shadow-sm my-2">
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <div class="text-muted small">Risk Skoru</div>
+                <div class="fw-bold">
+                  {{ r["risk_skor"] if r["risk_skor"] is not none else "-" }}
+                </div>
+              </div>
+
+              <div class="col-md-5">
+                <div class="text-muted small">Klinik Not</div>
+                <div>
+                  {{ r["klinik_not"] if r["klinik_not"] else "-" }}
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="text-muted small">Kırmızı Bayrak</div>
+                <div>
+                  {% if r["kkds_kirmizi_bayrak"] and r["kkds_kirmizi_bayrak"] != "Yok" %}
+                    <span class="badge bg-danger">{{ r["kkds_kirmizi_bayrak"] }}</span>
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+
+  {% if randevular|length == 0 %}
+  <tr><td colspan="6" class="text-muted">Bu hastanın randevusu yok.</td></tr>
+  {% endif %}
+</tbody> 
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}  

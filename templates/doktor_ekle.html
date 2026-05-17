@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}HBYS | Doktor Ekle{% endblock %}
+{% block page_title %}Doktor Ekle{% endblock %}
+{% block page_subtitle %}Yeni doktor kaydı{% endblock %}
+
+{% block content %}
+<div class="card card-soft">
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Ad</label>
+        <input class="form-control" name="ad" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Soyad</label>
+        <input class="form-control" name="soyad" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Branş</label>
+        <input class="form-control" name="brans" placeholder="Örn: Kardiyoloji" required>
+      </div>
+
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Kaydet</button>
+        <a class="btn btn-outline-secondary" href="/doktorlar">İptal</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

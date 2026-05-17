@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}HBYS | Audit Log{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+{% block page_subtitle %}Sistemde yapılan işlemler{% endblock %}
+
+{% block top_actions %}
+<form method="GET" action="{{ url_for('audit_export_csv') }}" class="d-inline">
+  <input type="hidden" name="action" value="{{ filters.action }}">
+  <input type="hidden" name="entity" value="{{ filters.entity }}">
+  <input type="hidden" name="q" value="{{ filters.q }}">
+  <input type="hidden" name="entity_id" value="{{ filters.entity_id }}">
+  <input type="hidden" name="from" value="{{ filters.from }}">
+  <input type="hidden" name="to" value="{{ filters.to }}">
+  <button type="submit" class="btn btn-outline-primary">
+    Export CSV
+  </button>
+</form>
+{% endblock %} 
+
+{% block content %}
+
+<div class="card card-soft mb-3">
+  <div class="card-body">
+    <form method="GET" action="{{ url_for('audit_page') }}" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-2">
+        <label class="form-label small text-muted">Action</label>
+        <select name="action" class="form-select">
+          <option value="">Hepsi</option>
+          <option value="CREATE" {% if filters.action=='CREATE' %}selected{% endif %}>CREATE</option>
+          <option value="DELETE" {% if filters.action=='DELETE' %}selected{% endif %}>DELETE</option>
+          <option value="UPDATE" {% if filters.action=='UPDATE' %}selected{% endif %}>UPDATE</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2">
+        <label class="form-label small text-muted">Entity</label>
+        <select name="entity" class="form-select">
+          <option value="">Hepsi</option>
+          <option value="hasta" {% if filters.entity=='hasta' %}selected{% endif %}>hasta</option>
+          <option value="randevu" {% if filters.entity=='randevu' %}selected{% endif %}>randevu</option>
+          <option value="doktor" {% if filters.entity=='doktor' %}selected{% endif %}>doktor</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2">
+        <label class="form-label small text-muted">Entity ID</label>
+        <input name="entity_id" class="form-control" value="{{ filters.entity_id }}" placeholder="örn: 17">
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label small text-muted">Arama (detail)</label>
+        <input name="q" class="form-control" value="{{ filters.q }}" placeholder="örn: hasta_id=2">
+      </div>
+
+      <div class="col-6 col-md-1">
+        <label class="form-label small text-muted">From</label>
+        <input type="date" name="from" class="form-control" value="{{ filters.from }}">
+      </div>
+
+      <div class="col-6 col-md-1">
+        <label class="form-label small text-muted">To</label>
+        <input type="date" name="to" class="form-control" value="{{ filters.to }}">
+      </div>
+
+      <div class="col-12 col-md-1 d-grid">
+        <button class="btn btn-primary" type="submit">Filtrele</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<div class="card card-soft">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Zaman</th>
+            <th>Action</th>
+            <th>Entity</th>
+            <th>Entity ID</th>
+            <th>Detay</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in logs %}
+          <tr>
+            <td class="text-muted">{{ l["ts"] }}</td>
+            <td class="fw-semibold">{{ l["action"] }}</td>
+            <td class="text-muted">{{ l["entity"] }}</td>
+            <td class="text-muted">{{ l["entity_id"] }}</td>
+            <td class="text-muted">{{ l["detail"] }}</td>
+          </tr>
+          {% endfor %}
+          {% if logs|length == 0 %}
+          <tr><td colspan="5" class="text-muted">Kayıt bulunamadı.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+           {% if page_count > 1 %}
+<nav class="mt-3">
+  <ul class="pagination justify-content-center">
+
+    {% if page > 1 %}
+    <li class="page-item">
+      <a class="page-link"
+         href="{{ url_for('audit_page', 
+              page=page-1,
+              action=filters.action,
+              entity=filters.entity,
+              q=filters.q,
+              entity_id=filters.entity_id,
+              **{'from': filters.from, 'to': filters.to}
+         ) }}">
+        Önceki
+      </a>
+    </li>
+    {% endif %}
+
+    <li class="page-item disabled">
+      <span class="page-link">
+        Sayfa {{ page }} / {{ page_count }}
+      </span>
+    </li>
+
+    {% if page < page_count %}
+    <li class="page-item">
+      <a class="page-link"
+         href="{{ url_for('audit_page', 
+              page=page+1,
+              action=filters.action,
+              entity=filters.entity,
+              q=filters.q,
+              entity_id=filters.entity_id,
+              **{'from': filters.from, 'to': filters.to}
+         ) }}">
+        Sonraki
+      </a>
+    </li>
+    {% endif %}
+
+  </ul>
+</nav>
+{% endif %}
+
+{% endblock %} 

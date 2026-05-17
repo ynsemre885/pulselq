@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}HBYS | Doktorlar{% endblock %}
+{% block page_title %}Doktorlar{% endblock %}
+{% block page_subtitle %}Doktor listesi{% endblock %}
+
+{% block top_actions %}
+<a class="btn btn-primary" href="/doktor_ekle">+ Doktor</a>
+{% endblock %}
+
+{% block content %}
+
+{% if msg %}
+  <div class="alert alert-success">{{ msg }}</div>
+{% endif %}
+{% if hata %}
+  <div class="alert alert-warning">{{ hata }}</div>
+{% endif %}
+
+<div class="card card-soft">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Ad Soyad</th>
+            <th>Branş</th>
+            <th class="text-end">İşlem</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for d in doktorlar %}
+          <tr>
+            <td class="fw-semibold">{{ d["ad"] }} {{ d["soyad"] }}</td>
+            <td class="text-muted">{{ d["brans"] }}</td>
+            <td class="text-end">
+              <form method="POST"
+                    action="{{ url_for('doktor_sil', id=d['id']) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('Bu doktoru silmek istediğinize emin misiniz?');">
+                <button type="submit" class="btn btn-sm btn-danger">Sil</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+
+          {% if doktorlar|length == 0 %}
+          <tr><td colspan="3" class="text-muted">Henüz doktor yok.</td></tr>
+          {% endif %}
+        </tbody>
+
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %} 

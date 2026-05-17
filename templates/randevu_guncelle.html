@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}HBYS 2.0 | Randevu Güncelle{% endblock %}
+{% block page_title %}Randevu Güncelle{% endblock %}
+{% block page_subtitle %}Mevcut randevu bilgilerini düzenleyin{% endblock %}
+
+{% block content %}
+<div class="card card-soft">
+  <div class="card-body">
+
+    {% if hata %}
+      <div class="alert alert-danger">{{ hata }}</div>
+    {% endif %}
+
+    <form method="post" class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Hasta ID</label>
+        <input class="form-control" type="text" name="hasta_id" value="{{ randevu['hasta_id'] }}" required>
+      </div>
+
+      <div class="col-md-8">
+        <label class="form-label">Şikayet</label>
+        <textarea class="form-control" name="sikayet" rows="2" required>{{ randevu['sikayet'] or '' }}</textarea>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Doktor</label>
+        <select class="form-select" name="doktor_id" required>
+          <option value="">Seçiniz...</option>
+          {% for d in doktorlar %}
+            <option value="{{ d['id'] }}" {% if d['id'] == randevu['doktor_id'] %}selected{% endif %}>
+              {{ d['ad'] }} {{ d['soyad'] }} — {{ d['brans'] }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Tarih</label>
+        <input class="form-control" type="date" name="tarih" value="{{ randevu['tarih'] }}" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Saat</label>
+        <input class="form-control" type="time" name="saat" value="{{ randevu['saat'] }}" required>
+      </div>
+
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Kaydet</button>
+        <a class="btn btn-outline-secondary" href="/panel">İptal</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %} 

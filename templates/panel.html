@@ -1,0 +1,843 @@
+{% extends "base.html" %}
+{% block title %}HBYS 2.0 | Panel{% endblock %}
+{% block page_title %}Hastane Erken Uyarı Sistemi{% endblock %}
+{% block page_subtitle %}AI destekli hasta riski, operasyon ve yönetim paneli{% endblock %}
+
+{% block top_actions %}
+<a class="btn btn-primary" href="/hasta_ekle">+ Hasta</a>
+<a class="btn btn-outline-primary" href="/randevu_ekle">+ Randevu</a>
+<a class="btn btn-outline-secondary" href="/doktor_programi">Doktor Programı</a>
+{% endblock %}
+
+{% block content %}
+
+<style>
+.risk-high {
+  background: linear-gradient(90deg, rgba(220, 38, 38, 0.10), rgba(255,255,255,0));
+}
+.risk-medium {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.10), rgba(255,255,255,0));
+}
+.risk-low {
+  background: linear-gradient(90deg, rgba(22, 163, 74, 0.08), rgba(255,255,255,0));
+}
+
+.table-hover tbody tr:hover {
+  transform: scale(1.004);
+  transition: 0.15s ease;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+.rounded-4 {
+  border-radius: 1rem !important;
+}
+
+.card-soft {
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+}
+
+.metric-card {
+  position: relative;
+  border-radius: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  height: 100%;
+}
+
+.metric-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin-bottom: 12px;
+  background: rgba(29, 78, 216, 0.08);
+}
+
+.metric-icon-danger {
+  background: rgba(220, 38, 38, 0.10);
+}
+
+.metric-icon-warning {
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.metric-icon-info {
+  background: rgba(14, 165, 233, 0.12);
+}
+
+.metric-title {
+  color: #6b7a90;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #10233f;
+  line-height: 1;
+}
+
+.metric-value-danger {
+  color: #dc2626;
+}
+
+.metric-value-warning {
+  color: #d97706;
+}
+
+.metric-value-info {
+  color: #0284c7;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #10233f;
+}
+
+.section-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1d4ed8;
+}
+
+.panel-subtle {
+  color: #6b7a90;
+  font-size: 0.92rem;
+}
+
+.table thead th {
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.table tbody td {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.chart-card canvas {
+  max-height: 320px;
+}
+
+.kritik-banner {
+  border-radius: 18px;
+  border: none;
+  box-shadow: 0 10px 25px rgba(220, 38, 38, 0.12);
+}
+
+.badge {
+  border-radius: 999px !important;
+  padding: 8px 10px;
+  font-weight: 700;
+}
+
+.list-group-item {
+  border: none;
+  border-bottom: 1px solid #eef2f7 !important;
+}
+
+.list-group-item:last-child {
+  border-bottom: none !important;
+}
+</style>
+
+{% if msg %}
+  <div class="alert alert-success">{{ msg }}</div>
+{% endif %}
+
+{% if hata %}
+  <div class="alert alert-danger">{{ hata }}</div>
+{% endif %}
+
+{% if toplam_kritik_sayi > 0 %}
+<div class="alert alert-danger kritik-banner d-flex justify-content-between align-items-start flex-wrap mb-3">
+  <div>
+    <h5 class="mb-2">🚨 Kritik Uyarı Merkezi</h5>
+    <div><b>Bugün {{ toplam_kritik_sayi }} kritik hasta / randevu tespit edildi.</b></div>
+
+    {% if kalp_riski_sayisi > 0 %}
+      <div>⚠ Olası kalp krizi riski: {{ kalp_riski_sayisi }}</div>
+    {% endif %}
+
+    {% if inme_riski_sayisi > 0 %}
+      <div>⚠ Olası inme riski: {{ inme_riski_sayisi }}</div>
+    {% endif %}
+
+    {% if solunum_riski_sayisi > 0 %}
+      <div>⚠ Kritik solunum problemi riski: {{ solunum_riski_sayisi }}</div>
+    {% endif %}
+  </div>
+
+  <div class="mt-2">
+    <a href="#kritik-liste" class="btn btn-light btn-sm">Kritik Listeye Git</a>
+  </div>
+</div>
+{% endif %}
+
+<div class="card card-soft mb-3">
+  <div class="card-body">
+    <form method="get" action="/panel" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Tarih Seç</label>
+        <input type="date" name="tarih" class="form-control" value="{{ secili_tarih }}">
+      </div>
+
+      <div class="col-md-8 d-flex gap-2 flex-wrap">
+        <button class="btn btn-primary" type="submit">Göster</button>
+        <a class="btn btn-outline-secondary" href="/panel">Bugün</a>
+        <a class="btn btn-success" href="/randevu_ekle?tarih={{ secili_tarih }}">
+          Seçili Gün İçin Randevu Ekle
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card card-soft mb-4 border-0">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div>
+        <h4 class="mb-0">🚨 Hastane Erken Uyarı Sistemi</h4>
+        <div class="text-muted small">AI destekli yönetim ve risk izleme özeti</div>
+      </div>
+      <span class="badge bg-danger">AI İzleme Aktif</span>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="metric-card">
+          <div class="metric-icon metric-icon-danger">🚨</div>
+          <div class="metric-title">Kritik Hasta / Randevu</div>
+          <div class="metric-value metric-value-danger">{{ toplam_kritik_sayi }}</div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="metric-card">
+          <div class="metric-icon metric-icon-danger">❤️</div>
+          <div class="metric-title">Kalp Krizi Riski</div>
+          <div class="metric-value">{{ kalp_riski_sayisi }}</div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="metric-card">
+          <div class="metric-icon metric-icon-warning">🧠</div>
+          <div class="metric-title">İnme Riski</div>
+          <div class="metric-value">{{ inme_riski_sayisi }}</div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="metric-card">
+          <div class="metric-icon metric-icon-info">🫁</div>
+          <div class="metric-title">Solunum Riski</div>
+          <div class="metric-value">{{ solunum_riski_sayisi }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-md-4">
+        <div class="metric-card">
+          <div class="metric-icon">👨‍⚕️</div>
+          <div class="metric-title">Toplam Doktor</div>
+          <div class="metric-value">{{ toplam_doktor }}</div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="metric-card">
+          <div class="metric-icon metric-icon-warning">⏱️</div>
+          <div class="metric-title">Son 24 Saat Acil / Öncelikli</div>
+          <div class="metric-value metric-value-warning">{{ acil_basvuru_24s }}</div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="metric-card">
+          <div class="metric-icon metric-icon-info">📈</div>
+          <div class="metric-title">Ortalama Risk Skoru</div>
+          <div class="metric-value metric-value-info">{{ ortalama_risk_skoru }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="metric-card">
+      <div class="metric-icon">🧍</div>
+      <div class="metric-title">Toplam Hasta</div>
+      <div class="metric-value">{{ toplam_hasta }}</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="metric-card">
+      <div class="metric-icon">📅</div>
+      <div class="metric-title">Toplam Randevu</div>
+      <div class="metric-value">{{ toplam_randevu }}</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="metric-card">
+      <div class="metric-icon">📌</div>
+      <div class="metric-title">Seçili Günün Randevusu</div>
+      <div class="metric-value">{{ bugunku_randevu }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-6">
+    <div class="card card-soft chart-card h-100">
+      <div class="card-body">
+        <div class="section-title">
+          <span class="section-dot"></span>
+          <span>{{ secili_tarih }} Saat Bazlı Randevu Dağılımı</span>
+        </div>
+        <canvas id="saatChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card card-soft chart-card h-100">
+      <div class="card-body">
+        <div class="section-title">
+          <span class="section-dot"></span>
+          <span>{{ secili_tarih }} Branş Dağılımı</span>
+        </div>
+        <canvas id="bransChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card card-soft chart-card">
+      <div class="card-body">
+        <div class="section-title">
+          <span class="section-dot"></span>
+          <span>{{ secili_tarih }} Aciliyet Dağılımı</span>
+        </div>
+        <canvas id="aciliyetChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if toplam_kritik_sayi > 0 %}
+<div class="card card-soft mb-4" id="kritik-liste">
+  <div class="card-body">
+    <div class="section-title">
+      <span class="section-dot"></span>
+      <span>🚨 Kritik Hasta / Randevu Listesi</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Hasta</th>
+            <th>Doktor</th>
+            <th>Saat</th>
+            <th>Şikayet</th>
+            <th>Uyarılar</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for r in kritik_randevular %}
+          <tr>
+            <td class="fw-semibold">
+             <a href="{{ url_for('hasta_detay', id=r['hasta_id']) }}" class="text-decoration-none">
+                {{ r["had"] }} {{ r["hsoyad"] }}
+              </a>
+            </td>
+
+            <td>
+              {% if r["dad"] %}
+                {{ r["dad"] }} {{ r["dsoyad"] }} — {{ r["dbrans"] }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>{{ r["saat"] }}</td>
+            <td>{{ r["sikayet"] }}</td>
+
+            <td>
+              {% for u in r["uyarilar"] %}
+                <span class="badge bg-danger me-1 mb-1">{{ u }}</span>
+              {% endfor %}
+
+              {% for k in r["kombinasyon_uyarilari"] %}
+                <span class="badge bg-dark me-1 mb-1">{{ k }}</span>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+{% if hasta_risk_test %}
+<div class="card card-soft mb-4">
+  <div class="card-body">
+    <div class="section-title">
+      <span class="section-dot"></span>
+      <span>Hasta Risk Tahmin Motoru Testi</span>
+    </div>
+
+    <div class="mb-2">
+      <strong>{{ hasta_risk_test["ad"] }} {{ hasta_risk_test["soyad"] }}</strong>
+      — {{ hasta_risk_test["tc"] }}
+    </div>
+
+    <div class="mb-2">
+      {% if hasta_risk_test["seviye"] == "KRITIK" %}
+        <span class="badge bg-danger">🚨 KRİTİK</span>
+      {% elif hasta_risk_test["seviye"] == "YUKSEK" %}
+        <span class="badge bg-warning text-dark">⚠ YÜKSEK</span>
+      {% elif hasta_risk_test["seviye"] == "ORTA" %}
+        <span class="badge bg-info text-dark">🟡 ORTA</span>
+      {% else %}
+        <span class="badge bg-success">🟢 DÜŞÜK</span>
+      {% endif %}
+    </div>
+
+    <div class="mb-2"><b>Puan:</b> {{ hasta_risk_test["puan"] }}</div>
+    <div class="mb-2"><b>Mesaj:</b> {{ hasta_risk_test["mesaj"] }}</div>
+    <div class="mb-2"><b>Son 30 Gün Başvuru:</b> {{ hasta_risk_test["toplam_basvuru"] }}</div>
+    <div class="mb-2"><b>Acil Başvuru:</b> {{ hasta_risk_test["acil_sayisi"] }}</div>
+    <div class="mb-2"><b>Maksimum Risk:</b> {{ hasta_risk_test["max_risk"] }}</div>
+
+    <div>
+      <b>Nedenler:</b>
+      <ul class="mb-0 mt-2">
+        {% for n in hasta_risk_test["nedenler"] %}
+          <li>{{ n }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card card-soft mb-4">
+  <div class="card-body">
+    <div class="section-title">
+      <span class="section-dot"></span>
+      <span>AI Risk Paneli (Son 30 Gün)</span>
+    </div>
+
+    <form method="get" action="/panel" class="row g-2 mb-3">
+      <input type="hidden" name="tarih" value="{{ secili_tarih }}">
+      <input type="hidden" name="hasta_ara" value="{{ hasta_ara or '' }}">
+      <input type="hidden" name="tc_ara" value="{{ tc_ara or '' }}">
+
+      <div class="col-md-4">
+        <select name="risk_filtre" class="form-select">
+          <option value="">Tüm Riskler</option>
+          <option value="KRITIK" {% if risk_filtre == "KRITIK" %}selected{% endif %}>Sadece Kritik</option>
+          <option value="YUKSEK" {% if risk_filtre == "YUKSEK" %}selected{% endif %}>Sadece Yüksek</option>
+          <option value="ORTA" {% if risk_filtre == "ORTA" %}selected{% endif %}>Sadece Orta</option>
+          <option value="DUSUK" {% if risk_filtre == "DUSUK" %}selected{% endif %}>Sadece Düşük</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100" type="submit">Filtrele</button>
+      </div>
+
+      <div class="col-md-2">
+        <a class="btn btn-outline-secondary w-100" href="/panel?tarih={{ secili_tarih }}">Temizle</a>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Hasta</th>
+            <th>TC</th>
+            <th>Risk Skoru</th>
+            <th>Acil Başvuru</th>
+            <th>Toplam Başvuru</th>
+            <th>AI Risk Seviyesi</th>
+            <th>AI Değerlendirme</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in riskli_hastalar %}
+          <tr>
+            <td class="fw-semibold">
+              <a href="{{ url_for('hasta_detay', id=h['hasta_id']) }}" class="text-decoration-none">
+                {{ h["ad"] }} {{ h["soyad"] }}
+              </a>
+            </td>
+            <td class="text-muted">{{ h["tc"] }}</td>
+            <td>
+              {% if h["max_risk"] >= 75 %}
+                <span class="badge bg-danger">{{ h["max_risk"] }}</span>
+              {% elif h["max_risk"] >= 45 %}
+                <span class="badge bg-warning text-dark">{{ h["max_risk"] }}</span>
+              {% else %}
+                <span class="badge bg-success">{{ h["max_risk"] }}</span>
+              {% endif %}
+            </td>
+            <td>{{ h["acil_sayisi"] }}</td>
+            <td>{{ h["toplam_basvuru"] }}</td>
+            <td>
+              {% if h["seviye"] == "KRITIK" %}
+                <span class="badge bg-danger">🚨 Kritik</span>
+              {% elif h["seviye"] == "YUKSEK" %}
+                <span class="badge bg-warning text-dark">⚠ Yüksek</span>
+              {% elif h["seviye"] == "ORTA" %}
+                <span class="badge bg-info text-dark">🟡 Orta</span>
+              {% else %}
+                <span class="badge bg-success">🟢 Düşük</span>
+              {% endif %}
+            </td>
+
+            <td>{{ h["mesaj"] }}</td>
+          </tr>
+          {% endfor %}
+
+          {% if riskli_hastalar|length == 0 %}
+          <tr>
+            <td colspan="7" class="text-muted">Henüz risk analizi yapılacak hasta verisi yok.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card card-soft mb-4">
+  <div class="card-body">
+    <div class="section-title">
+      <span class="section-dot"></span>
+      <span>Risk Dağılımı (Son 30 Gün)</span>
+    </div>
+    <canvas id="riskDagilimChart"></canvas>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="card card-soft">
+      <div class="card-body">
+
+        <form method="get" action="/panel" class="row g-2 mb-3">
+          <input type="hidden" name="tarih" value="{{ secili_tarih }}">
+          <input type="hidden" name="risk_filtre" value="{{ risk_filtre or '' }}">
+
+          <div class="col-md-5">
+            <input type="text" name="hasta_ara" class="form-control"
+                   placeholder="Hasta adı ara..."
+                   value="{{ hasta_ara or '' }}">
+          </div>
+
+          <div class="col-md-5">
+            <input type="text" name="tc_ara" class="form-control"
+                   placeholder="TC ara..."
+                   value="{{ tc_ara or '' }}">
+          </div>
+
+          <div class="col-md-2">
+            <button class="btn btn-primary w-100">Ara</button>
+          </div>
+        </form>
+
+        <div class="section-title">
+          <span class="section-dot"></span>
+          <span>Hastalar</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Ad Soyad</th>
+                <th>TC</th>
+                <th class="text-end">İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in hastalar %}
+              <tr>
+                <td class="fw-semibold">{{ h["ad"] }} {{ h["soyad"] }}</td>
+                <td class="text-muted">{{ h["tc"] }}</td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-secondary" href="/hasta_guncelle/{{ h['id'] }}">Güncelle</a>
+                  <a class="btn btn-sm btn-outline-danger" href="/hasta_sil/{{ h['id'] }}">Sil</a>
+                </td>
+              </tr>
+              {% endfor %}
+              {% if hastalar|length == 0 %}
+              <tr><td colspan="3" class="text-muted">Henüz hasta yok.</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card card-soft">
+      <div class="card-body">
+        <div class="section-title">
+          <span class="section-dot"></span>
+          <span>{{ secili_tarih }} Tarihli Randevular</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle table-hover">
+            <thead>
+              <tr>
+                <th>Hasta</th>
+                <th>Doktor</th>
+                <th>Tarih</th>
+                <th>Saat</th>
+                <th>Öncelik</th>
+                <th>Risk</th>
+                <th>Şikayet</th>
+                <th class="text-end">İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in randevular %}
+              {% set risk = r["risk_skor"] or 0 %}
+              <tr class="{% if risk >= 75 %}risk-high{% elif risk >= 45 %}risk-medium{% else %}risk-low{% endif %}">
+                <td class="fw-semibold">
+                  <a href="{{ url_for('hasta_detay', id=r['hasta_id']) }}" class="text-decoration-none">
+                    {{ r["had"] }} {{ r["hsoyad"] }}
+                  </a>
+                </td>
+
+                <td class="text-muted">
+                  {% if r["dad"] %}
+                    {{ r["dad"] }} {{ r["dsoyad"] }} — {{ r["dbrans"] }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td class="text-muted">{{ r["tarih"] }}</td>
+                <td class="text-muted">{{ r["saat"] }}</td>
+
+                <td>
+                  {% set a = (r["aciliyet"] or "NORMAL") %}
+                  <span class="badge rounded-pill
+                    {% if a == 'ACIL' %} bg-danger
+                    {% elif a == 'ONCELIKLI' %} bg-warning text-dark
+                    {% else %} bg-success
+                    {% endif %}">
+                    {{ a }}
+                  </span>
+                </td>
+
+                <td>
+                  {% if risk >= 75 %}
+                    <span class="badge bg-danger">{{ risk }}</span>
+                  {% elif risk >= 45 %}
+                    <span class="badge bg-warning text-dark">{{ risk }}</span>
+                  {% else %}
+                    <span class="badge bg-success">{{ risk }}</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  <div>{{ r["sikayet"] }}</div>
+
+                  {% if r["klinik_not"] %}
+                    <div class="small text-muted mt-1">
+                      {{ r["klinik_not"] }}
+                    </div>
+                  {% endif %}
+
+                  {% if r["tani_tahmini"] %}
+                    <div class="small text-muted mt-1">
+                      <b>Olası Tanılar:</b>
+                      {% for t in r["tani_tahmini"] %}
+                        <span class="badge bg-info text-dark me-1">{{ t }}</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+
+                  {% if r["alarm_kategorileri"] %}
+                    <div class="small mt-1">
+                      {% for k in r["alarm_kategorileri"] %}
+                        <span class="badge bg-danger me-1 mb-1">{{ k }}</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+
+                  {% if r["kombinasyon_uyarilari"] %}
+                    <div class="small mt-1">
+                      {% for k in r["kombinasyon_uyarilari"] %}
+                        <span class="badge bg-dark me-1 mb-1">{{ k }}</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+
+                  {% if r["uyarilar"] %}
+                    <div class="mt-1">
+                      {% for u in r["uyarilar"] %}
+                        <span class="badge bg-danger me-1 mb-1">{{ u }}</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('randevu_guncelle', rid=r['rid']) }}">Düzenle</a>
+
+                  <form method="POST"
+                        action="{{ url_for('randevu_sil', rid=r['rid']) }}"
+                        style="display:inline;"
+                        onsubmit="return confirm('Bu randevuyu silmek istediğinize emin misiniz?');">
+                    <button type="submit" class="btn btn-sm btn-danger">Sil</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+
+              {% if randevular|length == 0 %}
+              <tr>
+                <td colspan="8" class="text-muted">{{ secili_tarih }} tarihinde randevu yok.</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  const saatLabels = {{ (saat_etiketler or [])|tojson|safe }};
+  const saatData = {{ (saat_degerler or [])|tojson|safe }};
+
+  const bransLabels = {{ (brans_etiketler or [])|tojson|safe }};
+  const bransData = {{ (brans_degerler or [])|tojson|safe }};
+
+  const aciliyetLabels = {{ (aciliyet_etiketler or [])|tojson|safe }};
+  const aciliyetData = {{ (aciliyet_degerler or [])|tojson|safe }};
+
+  const riskGrafikLabels = {{ (risk_grafik_etiketler or [])|tojson|safe }};
+  const riskGrafikData = {{ (risk_grafik_degerler or [])|tojson|safe }};
+
+  window.addEventListener("load", function () {
+    const saatCtx = document.getElementById("saatChart");
+    if (saatCtx && typeof Chart !== "undefined") {
+      new Chart(saatCtx, {
+        type: "bar",
+        data: {
+          labels: saatLabels,
+          datasets: [{
+            label: "Randevu Sayısı",
+            data: saatData,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            }
+          }
+        }
+      });
+    }
+
+    const bransCtx = document.getElementById("bransChart");
+    if (bransCtx && typeof Chart !== "undefined") {
+      new Chart(bransCtx, {
+        type: "pie",
+        data: {
+          labels: bransLabels,
+          datasets: [{
+            data: bransData
+          }]
+        },
+        options: {
+          responsive: true
+        }
+      });
+    }
+
+    const aciliyetCtx = document.getElementById("aciliyetChart");
+    if (aciliyetCtx && typeof Chart !== "undefined") {
+      new Chart(aciliyetCtx, {
+        type: "doughnut",
+        data: {
+          labels: aciliyetLabels,
+          datasets: [{
+            data: aciliyetData
+          }]
+        },
+        options: {
+          responsive: true
+        }
+      });
+    }
+
+    const riskCtx = document.getElementById("riskDagilimChart");
+    if (riskCtx && typeof Chart !== "undefined") {
+      new Chart(riskCtx, {
+        type: "bar",
+        data: {
+          labels: riskGrafikLabels,
+          datasets: [{
+            label: "Hasta Sayısı",
+            data: riskGrafikData,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            }
+          }
+        }
+      });
+    }
+  });
+</script>
+
+{% endblock %} 

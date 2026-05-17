@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}HBYS 2.0 | Doktor Programı{% endblock %}
+{% block page_title %}Doktor Programı{% endblock %}
+{% block page_subtitle %}Doktorun günlük randevu planı{% endblock %}
+
+{% block top_actions %}
+<a class="btn btn-outline-secondary" href="/panel">← Panele Dön</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="card card-soft mb-3">
+  <div class="card-body">
+    <form method="get" action="/doktor_programi" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label">Doktor Seç</label>
+        <select name="doktor_id" class="form-select">
+          <option value="">Seçiniz...</option>
+          {% for d in doktorlar %}
+            <option value="{{ d['id'] }}" {% if secili_doktor_id and d['id']|string == secili_doktor_id|string %}selected{% endif %}>
+              {{ d['ad'] }} {{ d['soyad'] }} — {{ d['brans'] }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Tarih</label>
+        <input type="date" name="tarih" class="form-control" value="{{ secili_tarih }}">
+      </div>
+
+      <div class="col-md-3">
+        <button class="btn btn-primary w-100" type="submit">Göster</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if secili_doktor %}
+<div class="card card-soft mb-3">
+  <div class="card-body">
+    <h5 class="mb-1">{{ secili_doktor['ad'] }} {{ secili_doktor['soyad'] }}</h5>
+    <div class="text-muted">{{ secili_doktor['brans'] }} — {{ secili_tarih }}</div>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for slot in slot_durumu %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card card-soft h-100 {% if slot.dolu %}border-danger{% else %}border-success{% endif %}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">{{ slot.saat }}</h6>
+          {% if slot.dolu %}
+            <span class="badge bg-danger">Dolu</span>
+          {% else %}
+            <span class="badge bg-success">Boş</span>
+          {% endif %}
+        </div>
+
+        {% if slot.dolu %}
+          <div class="small">
+            <div>
+              <b>Hasta:</b> 
+              <a href="{{ url_for('hasta_detay', id=slot.kayit['hasta_id']) }}"
+                 class="text-decoration-none fw-semibold">
+                 {{ slot.kayit['had'] }} {{ slot.kayit['hsoyad'] }}
+              </a>
+            </div> 
+            <div><b>Şikayet:</b> {{ slot.kayit['sikayet'] or '-' }}</div>
+            <div>
+              <b>Öncelik:</b>
+              {% set a = slot.kayit['aciliyet'] or 'NORMAL' %}
+              <span class="badge
+                {% if a == 'ACIL' %}bg-danger
+                {% elif a == 'ONCELIKLI' %}bg-warning text-dark
+                {% else %}bg-success{% endif %}">
+                {{ a }}
+              </span>
+            </div>
+          </div>
+        {% else %}
+          <div class="small text-muted">Bu saat boş.</div>
+          <a class="btn btn-sm btn-outline-primary mt-2"
+             href="/randevu_ekle?tarih={{ secili_tarih }}&saat={{ slot.saat }}&doktor_id={{ secili_doktor['id'] }}"> 
+            Bu Slota Randevu Ekle
+          </a> 
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card card-soft mt-4">
+  <div class="card-body">
+    <h5 class="mb-3">Günlük Randevu Listesi</h5>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Saat</th>
+            <th>Hasta</th>
+            <th>Şikayet</th>
+            <th>Öncelik</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in randevular %}
+          <tr>
+            <td>{{ r["saat"] }}</td>
+            <td>
+              <a href="{{ url_for('hasta_detay', id=r['hasta_id']) }}"
+                 class="text-decoration-none fw-semibold">
+                 {{ r["had"] }} {{ r["hsoyad"] }}
+              </a>
+            </td> 
+            <td>{{ r["sikayet"] }}</td>
+            <td>
+              {% set a = r["aciliyet"] or "NORMAL" %}
+              <span class="badge
+                {% if a == 'ACIL' %}bg-danger
+                {% elif a == 'ONCELIKLI' %}bg-warning text-dark
+                {% else %}bg-success{% endif %}">
+                {{ a }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if randevular|length == 0 %}
+          <tr><td colspan="4" class="text-muted">Bu doktor için seçilen tarihte randevu yok.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %} 

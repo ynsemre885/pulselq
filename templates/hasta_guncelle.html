@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}HBYS 2.0 | Hasta Güncelle{% endblock %}
+{% block page_title %}Hasta Güncelle{% endblock %}
+{% block page_subtitle %}Kayıt düzenleme{% endblock %}
+
+{% block content %}
+<div class="card card-soft">
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Ad</label>
+        <input class="form-control" name="ad" value="{{ hasta['ad'] }}" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Soyad</label>
+        <input class="form-control" name="soyad" value="{{ hasta['soyad'] }}" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">TC</label>
+        <input class="form-control" name="tc" value="{{ hasta['tc'] }}" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Doğum Yili</label>
+        <input name="dogum_yili"
+               class="form-control"
+               value="{{ hasta['dogum_yili'] or '' }}"
+               placeholder="örn: 2002">
+      </div>
+
+    <div class="mb-3">
+        <label class="form-label">Cinsiyet</label>
+        <select name="cinsiyet" class="form-select">
+          <option value="">Seçiniz</option>
+          <option value="E" {% if hasta['cinsiyet']=='E' %}selected{% endif %}>Erkek</option>
+          <option value="K" {% if hasta['cinsiyet']=='K' %}selected{% endif %}>Kadin</option>
+        </select>
+      </div>
+
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Güncelle</button>
+        <a class="btn btn-outline-secondary" href="/panel">İptal</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
