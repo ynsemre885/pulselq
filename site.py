@@ -2675,4 +2675,4 @@ if __name__ == "__main__":
     seed_user_once() 
     seed_doctors_once()
 
-    app.run(debug=True)  
+    app.run(host='0.0.0.0', port=5000, debug=True) 
