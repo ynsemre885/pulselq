@@ -2660,19 +2660,19 @@ def migrate_audit_indexes():
 
 
 if __name__ == "__main__":
-    init_db()
-    run_safe_migrations() 
-    migrate_klinik_alanlari()
+    #init_db()
+    #run_safe_migrations() 
+    #migrate_klinik_alanlari()
 
-    migrate_add_audit_logs()
-    migrate_audit_indexes()
+    #migrate_add_audit_logs()
+    #migrate_audit_indexes()
 
-    migrate_unique_doktor_slot() 
+    #migrate_unique_doktor_slot() 
 
-    migrate_hash_passwords()  
+    #migrate_hash_passwords()  
     
-    seed_admin_once()
-    seed_user_once() 
-    seed_doctors_once()
+    #seed_admin_once()
+    #seed_user_once() 
+    #seed_doctors_once()
 
     app.run(host='0.0.0.0', port=5000, debug=True) 
